@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+</head>
+
+<body>
+    <h1>Benvenuto nella dashboard, <span id="user-name"></span>!</h1>
+    <button id="logout-button">Logout</button>
+
+    <!-- Inserisci il contenuto della dashboard qui -->
+    <!-- Aggiungi questo codice dopo il tag <h1> -->
+    <div id="songs">
+        <h2>Gestione Canzoni</h2>
+
+        <form id="add-song-form">
+            <input type="text" id="song-name" placeholder="Nome canzone" required />
+            <textarea id="song-description" placeholder="Descrizione canzone" required></textarea>
+            <button type="submit">Aggiungi canzone</button>
+        </form>
+
+        <table id="songs-table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Descrizione</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Le righe delle canzoni saranno aggiunte dinamicamente qui -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        ipcRenderer.on('setServerUrl', (event, serverUrl) => {
+            window.serverUrl = serverUrl;
+        });
+
+
+        document.getElementById('logout-button').addEventListener('click', () => {
+            // Rimuovi il valore di 'authenticated' da sessionStorage e reindirizza all'index
+            sessionStorage.removeItem('authenticated');
+            window.location.href = 'index.html';
+        });
+
+        // Aggiungi questo codice alla fine del tag <script>
+
+        async function getSongs() {
+            try {
+                const response = await fetch(`${window.serverUrl}/songs`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, description }),
+                    credentials: 'include',
+                });
+
+
+                if (response.status === 200) {
+                    const songs = await response.json();
+                    populateSongsTable(songs);
+                } else {
+                    alert('Errore durante il recupero delle canzoni. Riprova.');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Errore durante il recupero delle canzoni. Riprova.');
+            }
+        }
+
+        function populateSongsTable(songs) {
+            const tableBody = document.getElementById('songs-table').querySelector('tbody');
+            tableBody.innerHTML = '';
+
+            songs.forEach((song) => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+      <td>${song.name}</td>
+      <td>${song.description}</td>
+      <td>
+        <button class="edit-song" data-id="${song.id}">Modifica</button>
+        <button class="delete-song" data-id="${song.id}">Elimina</button>
+      </td>
+    `;
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        document.getElementById('add-song-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('song-name').value;
+            const description = document.getElementById('song-description').value;
+
+            try {
+                const response = await fetch(`${window.serverUrl}/songs`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, description }),
+                });
+
+                if (response.status === 200) {
+                    alert('Canzone aggiunta con successo!');
+                    getSongs(); // Aggiorna la tabella delle canzoni
+                } else {
+                    alert('Errore durante l\'aggiunta della canzone. Riprova.');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Errore durante l\'aggiunta della canzone. Riprova.');
+            }
+        });
+
+        // Inizializza la tabella delle canzoni
+        getSongs();
+
+        // Gestione eventi per i pulsanti Modifica ed Elimina
+        document.getElementById('songs-table').addEventListener('click', async (e) => {
+            if (e.target.classList.contains('edit-song')) {
+                const songId = e.target.getAttribute('data-id');
+                // Implementa la logica per la modifica della canzone
+            } else if (e.target.classList.contains('delete-song')) {
+                const songId = e.target.getAttribute('data-id');
+
+                try {
+                    const response = await fetch(`${window.serverUrl}/songs/${songId}`, {
+                        method: 'DELETE',
+                    });
+
+                    if (response.status === 200) {
+                        alert('Canzone eliminata con successo!');
+                        getSongs(); // Aggiorna la tabella delle canzoni
+                    } else {
+                        alert('Errore durante l\'eliminazione della canzone. Riprova.');
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert('Errore durante l\'eliminazione della canzone. Riprova.');
+                }
+            }
+        });
+
+
+    </script>
+</body>
+
+</html>
